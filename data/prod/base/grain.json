@@ -1,0 +1,8 @@
+{
+  "name": "Grain Mill",
+  "human_prod_rate": 15,
+  "robot_prod_rate": 25,
+  "produces": "Grain",
+  "max_human_workers": 10,
+  "max_robot_workers": 5
+}

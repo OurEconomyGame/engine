@@ -1,16 +1,14 @@
 mod companies;
 mod player;
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+mod load_json;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn load_grain(){
+        let my_json: json::JsonValue = load_json::load_json_file("data/prod/base/grain.json");
+        let base_grain = companies::TierOneProd::new_base(my_json);
     }
 }

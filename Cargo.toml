@@ -1,7 +1,15 @@
 [package]
-name = "engine"
+name = "our_economy_engine"                        # 🚨 This might already be taken on crates.io
 version = "0.1.0"
-edition = "2024"
+edition = "2024"                       # Perfectly fine, 2024 is legit
+description = "Engine for the game Our Economy."    # ✅ Required for publishing
+authors = ["Masterplayer833"]           # ✅ Required
+license = "MIT OR Apache-2.0"                        # ✅ Required
+readme = "README.md"                                 # ✅ Strongly recommended
+keywords = ["game", "economy", "simulation", "engine"]
+categories = ["game-engines", "simulation"]          # Choose from: https://crates.io/category_slugs
+
+include = ["src/**", "data/**", "Cargo.toml", "README.md"]  # ✅ This is fine
 
 [dependencies]
 chrono = "0.4.41"

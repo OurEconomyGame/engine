@@ -1,11 +1,13 @@
 pub struct Player {
-    id: u32,
+    pub id: u32,
+    pub name: String,
 }
 
 impl Player {
     pub fn blank() -> Self {
         Player {
-            id: 0
+            id: 0,
+            name: "Admin".to_string(),
         }
     }
 }

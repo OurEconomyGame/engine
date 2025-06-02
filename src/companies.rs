@@ -1,7 +1,8 @@
 use json::{parse, JsonValue};
 use crate::player::Player;
+use std::fmt;
 
-struct TierOneProd {
+pub struct TierOneProd {
     name: String,
     owner: Player,
     human_prod_rate: u32,
@@ -14,7 +15,7 @@ struct TierOneProd {
 }
 
 impl TierOneProd {
-    fn new_base(data: JsonValue) -> Self {
+    pub fn new_base(data: JsonValue) -> Self {
         // Extract everything with hard failure if missing or wrong type
         let name: String = data["name"]
             .as_str()
@@ -54,7 +55,7 @@ impl TierOneProd {
             max_robot_workers,
         }
     }
-    fn new_instance(base: TierOneProd, name: String, owner: Player) -> Self {
+    pub fn new_instance(base: TierOneProd, name: String, owner: Player) -> Self {
         TierOneProd {
             name,
             owner,
@@ -66,5 +67,19 @@ impl TierOneProd {
             max_human_workers: base.max_human_workers,
             max_robot_workers: base.max_robot_workers,
         }
+    }
+}
+
+impl fmt::Display for TierOneProd {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Tier One Production Facility: {}", self.name)?;
+        writeln!(f, "  Owned by: {}", self.owner.name)?;
+        writeln!(f, "  Produces: {}", self.creates)?;
+        writeln!(f, "  Human Production Rate: {}", self.human_prod_rate)?;
+        writeln!(f, "  Robot Production Rate: {}", self.robot_prod_rate)?;
+        writeln!(f, "  Max Human Workers: {}", self.max_human_workers)?;
+        writeln!(f, "  Max Robot Workers: {}", self.max_robot_workers)?;
+        writeln!(f, "  Current Human Workers: {}", self.human_workers)?;
+        writeln!(f, "  Current Robot Workers: {}", self.robot_workers)
     }
 }
