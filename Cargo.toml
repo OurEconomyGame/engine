@@ -3,7 +3,7 @@ name = "our_economy_engine"
 version = "0.1.0"
 edition = "2024"                     
 description = "Engine for the game Our Economy. Currently unusable, and progressing through rapid prototyping. Will often be half made, and be missing stuff." 
-authors = ["Masterplayer833"]           
+authors = ["Moneyga.me Community", "Mastercoder1323/Masterplayer833"]           
 license = "MIT OR Apache-2.0"                        
 readme = "README.md"                               
 keywords = ["game", "economy", "simulation", "engine"]
@@ -14,3 +14,6 @@ include = ["src/**", "data/**", "Cargo.toml", "README.md"]
 chrono = "0.4.41"
 json = "0.12.4"
 rusqlite = "0.36.0"
+
+[build-dependencies]
+walkdir = "2.4"

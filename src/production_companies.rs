@@ -1,0 +1,178 @@
+use crate::materials::*;
+use crate::player::Player;
+use json::JsonValue;
+use std::fmt;
+
+/// Tracks material quantities owned by a company instance
+#[derive(Debug, Clone)]
+pub struct OwnsMaterials {
+    pub grain: u32,
+    pub electricity: u32,
+    pub water: u32,
+}
+
+impl OwnsMaterials {
+    pub fn new() -> Self {
+        OwnsMaterials {
+            grain: 0,
+            electricity: 0,
+            water: 0,
+        }
+    }
+
+    pub fn add(&mut self, mat: Material, amount: u32) {
+        match mat {
+            Material::Grain => self.grain += amount,
+            Material::Electricity => self.electricity += amount,
+            Material::Water => self.water += amount,
+        }
+    }
+}
+
+/// Base configuration for Tier 1 companies
+#[derive(Debug, Clone)]
+pub struct TierOneProdBase {
+    pub type_name: String,
+    pub human_prod_rate: u32,
+    pub robot_prod_rate: u32,
+    pub creates: Material,
+    pub max_human_workers: u32,
+    pub max_robot_workers: u32,
+    pub cost: u32,
+}
+
+impl TierOneProdBase {
+    pub fn new(type_name: String, human_prod_rate: u32, creates: Material) -> Self {
+        TierOneProdBase {
+            type_name,
+            human_prod_rate,
+            robot_prod_rate: human_prod_rate * 2,
+            creates,
+            max_human_workers: 10,
+            max_robot_workers: 1,
+            cost: 200,
+        }
+    }
+}
+
+/// Instance of a Tier 1 company
+#[derive(Debug, Clone)]
+pub struct TierOneProdInstance {
+    pub name: String,
+    pub owner: u32,
+    pub money: u32,
+    pub base_type: String,
+    pub creates: Material,
+    pub human_prod_rate: u32,
+    pub robot_prod_rate: u32,
+    pub max_human_workers: u32,
+    pub max_robot_workers: u32,
+    pub human_workers: JsonValue,
+    pub robot_workers: JsonValue,
+    pub owns: OwnsMaterials,
+}
+
+impl TierOneProdInstance {
+    pub fn new(base: &TierOneProdBase, name: String, owner: &mut Player) -> Option<Self> {
+        if owner.usd >= base.cost {
+            owner.spend(base.cost);
+            Some(TierOneProdInstance {
+                name,
+                owner: owner.id,
+                money: 0,
+                base_type: base.type_name.clone(),
+                creates: base.creates,
+                human_prod_rate: base.human_prod_rate,
+                robot_prod_rate: base.robot_prod_rate,
+                max_human_workers: base.max_human_workers,
+                max_robot_workers: base.max_robot_workers,
+                human_workers: JsonValue::new_array(),
+                robot_workers: JsonValue::new_array(),
+                owns: OwnsMaterials::new(),
+            })
+        } else {
+            None
+        }
+    }
+
+    pub fn hire_worker(&mut self, player: &Player) {
+        let current_workers = self.human_workers.len();
+        if current_workers >= self.max_human_workers as usize {
+            panic!("No available slots to hire a new human worker.");
+        }
+
+        // Check if already hired
+        for entry in self.human_workers.members() {
+            if let Some(pid) = entry[0].as_u32() {
+                if pid == player.id {
+                    panic!("Player {} is already hired here!", pid);
+                }
+            }
+        }
+
+        let new_entry = JsonValue::Array(vec![player.id.clone().into(), false.into()]);
+        self.human_workers.push(new_entry).unwrap();
+    }
+
+    pub fn human_worked(&mut self, player: &Player) {
+        let found = false;
+
+        for entry in self.human_workers.members_mut() {
+            if let Some(pid) = entry[0].as_u32() {
+                if pid == player.id {
+                    if entry[1].as_bool().unwrap_or(false) {
+                        panic!("Player {} has already worked this cycle.", pid);
+                    } else {
+                        entry[1] = true.into();
+                        self.owns.add(self.creates, self.human_prod_rate);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if !found {
+            panic!("Player {} is not hired at this facility.", player.id);
+        }
+    }
+
+    pub fn reset_workers(&mut self) {
+        for entry in self.human_workers.members_mut() {
+            entry[1] = false.into(); // Set worked status to false
+        }
+    }
+}
+
+impl fmt::Display for TierOneProdInstance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Tier One Production Facility: {}", self.name)?;
+        writeln!(f, "  Type: {}", self.base_type)?;
+        writeln!(f, "  Owned by: {}", self.owner)?;
+        writeln!(f, "  Has: ${} USD", self.money)?;
+        writeln!(f, "  Produces: {}", self.creates)?;
+        writeln!(f, "  Human Production Rate: {}", self.human_prod_rate)?;
+        writeln!(f, "  Robot Production Rate: {}", self.robot_prod_rate)?;
+        writeln!(f, "  Max Human Workers: {}", self.max_human_workers)?;
+        writeln!(f, "  Materials Owned: {:?}", self.owns)?;
+        writeln!(
+            f,
+            "  Current Human Workers JSON: {}",
+            self.human_workers.dump()
+        )?;
+        writeln!(
+            f,
+            "  Current Robot Workers JSON: {}",
+            self.robot_workers.dump()
+        )
+    }
+}
+
+impl fmt::Display for TierOneProdBase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Tier One Production Facility: {}", self.type_name)?;
+        writeln!(f, "  Produces: {}", self.creates)?;
+        writeln!(f, "  Human Production Rate: {}", self.human_prod_rate)?;
+        writeln!(f, "  Robot Production Rate: {}", self.robot_prod_rate)?;
+        writeln!(f, "  Max Human Workers: {}", self.max_human_workers)
+    }
+}

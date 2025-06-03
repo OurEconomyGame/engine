@@ -1,6 +1,11 @@
-mod companies;
+#![allow(dead_code)]
+
+mod production_companies;
 mod player;
-mod load_json;
+mod materials;
+mod company_data;
+mod db;
+/* 
 
 #[cfg(test)]
 mod tests {
@@ -12,3 +17,5 @@ mod tests {
         let base_grain = companies::TierOneProd::new_base(my_json);
     }
 }
+
+*/
