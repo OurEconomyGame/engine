@@ -75,10 +75,10 @@ pub struct TierOneProdInstance {
 }
 
 impl TierOneProdInstance {
-    pub fn new(base: &TierOneProdBase, name: String, owner: &mut Player) -> Option<Self> {
+    pub fn new(conn: &Connection, base: &TierOneProdBase, name: String, owner: &mut Player) -> Option<Self> {
         if owner.usd >= base.cost {
             owner.spend(base.cost);
-            Some(TierOneProdInstance {
+            let mut instance = TierOneProdInstance {
                 id: None,
                 name,
                 owner: owner.id,
@@ -92,7 +92,10 @@ impl TierOneProdInstance {
                 human_workers: JsonValue::new_array(),
                 robot_workers: JsonValue::new_array(),
                 owns: OwnsMaterials::new(),
-            })
+            };
+            instance.save(conn).expect("Something went wrong");
+            owner.edit_shares(&instance, 10000);
+            Some(instance)
         } else {
             None
         }

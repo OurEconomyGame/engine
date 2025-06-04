@@ -5,6 +5,7 @@ mod company_data;
 mod materials;
 mod player;
 mod db;
+mod own_struct;
 use db::*;
 use production_companies::*;
 use company_data::*;
@@ -19,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     player.earn(300000);
     // Now you have a [TierOneProd]
     for prod in &all_prods {
-        if let Some(mut instance) = TierOneProdInstance::new(prod, "Something".to_string(), &mut player) {
+        if let Some(mut instance) = TierOneProdInstance::new(&conn, prod, "Something".to_string(), &mut player) {
             let id = instance.save(&conn)?;
             instances_id.push(id);
         }

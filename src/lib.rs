@@ -5,6 +5,7 @@ mod player;
 mod materials;
 mod company_data;
 mod db;
+mod own_struct;
 /* 
 
 #[cfg(test)]
