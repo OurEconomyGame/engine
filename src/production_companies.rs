@@ -1,6 +1,7 @@
 use crate::materials::*;
 use crate::player::Player;
-use json::JsonValue;
+use json::{JsonValue, object};
+use rusqlite::{Connection, Result, params};
 use std::fmt;
 
 /// Tracks material quantities owned by a company instance
@@ -58,6 +59,7 @@ impl TierOneProdBase {
 /// Instance of a Tier 1 company
 #[derive(Debug, Clone)]
 pub struct TierOneProdInstance {
+    pub id: Option<u32>,
     pub name: String,
     pub owner: u32,
     pub money: u32,
@@ -77,6 +79,7 @@ impl TierOneProdInstance {
         if owner.usd >= base.cost {
             owner.spend(base.cost);
             Some(TierOneProdInstance {
+                id: None,
                 name,
                 owner: owner.id,
                 money: 0,
@@ -139,6 +142,95 @@ impl TierOneProdInstance {
     pub fn reset_workers(&mut self) {
         for entry in self.human_workers.members_mut() {
             entry[1] = false.into(); // Set worked status to false
+        }
+    }
+
+    pub fn save(&mut self, conn: &Connection) -> Result<u32> {
+        let data = object! {
+            money: self.money,
+            human_prod_rate: self.human_prod_rate,
+            robot_prod_rate: self.robot_prod_rate,
+            max_human_workers: self.max_human_workers,
+            max_robot_workers: self.max_robot_workers,
+            human_workers: self.human_workers.clone(),
+            robot_workers: self.robot_workers.clone(),
+            owns: {
+                grain: self.owns.grain,
+                electricity: self.owns.electricity,
+                water: self.owns.water,
+            },
+            creates: self.creates.to_string_key(),  // Save material as simple string key
+        };
+
+        let data_str = data.dump();
+
+        conn.execute(
+            "INSERT INTO company (name, owner, type, data) VALUES (?1, ?2, ?3, ?4)",
+            params![self.name, self.owner.to_string(), self.base_type, data_str,],
+        )?;
+        self.id = Some(conn.last_insert_rowid() as u32);
+        Ok(conn.last_insert_rowid() as u32)
+    }
+
+    pub fn load(conn: &Connection, id: u32) -> Result<Option<Self>> {
+        let mut stmt = conn.prepare("SELECT name, owner, type, data FROM company WHERE id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+
+        if let Some(row) = rows.next()? {
+            let name: String = row.get(0)?;
+            let owner_str: String = row.get(1)?;
+            let base_type: String = row.get(2)?;
+            let data_str: String = row.get(3)?;
+
+            let data_json = json::parse(&data_str).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    data_str.len(),
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?;
+
+            let owner = owner_str.parse::<u32>().unwrap_or(0);
+            let money = data_json["money"].as_u32().unwrap_or(0);
+            let human_prod_rate = data_json["human_prod_rate"].as_u32().unwrap_or(0);
+            let robot_prod_rate = data_json["robot_prod_rate"].as_u32().unwrap_or(0);
+            let max_human_workers = data_json["max_human_workers"].as_u32().unwrap_or(0);
+            let max_robot_workers = data_json["max_robot_workers"].as_u32().unwrap_or(0);
+            let human_workers = data_json["human_workers"].clone();
+            let robot_workers = data_json["robot_workers"].clone();
+
+            let creates_str = data_json["creates"].as_str().unwrap_or("");
+            let creates = Material::from_str(creates_str).ok_or_else(|| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Text,
+                    Box::new(std::fmt::Error),
+                )
+            })?;
+
+            let owns = OwnsMaterials {
+                grain: data_json["owns"]["grain"].as_u32().unwrap_or(0),
+                electricity: data_json["owns"]["electricity"].as_u32().unwrap_or(0),
+                water: data_json["owns"]["water"].as_u32().unwrap_or(0),
+            };
+
+            Ok(Some(TierOneProdInstance {
+                id: Some(id),
+                name,
+                owner,
+                money,
+                base_type,
+                creates,
+                human_prod_rate,
+                robot_prod_rate,
+                max_human_workers,
+                max_robot_workers,
+                human_workers,
+                robot_workers,
+                owns,
+            }))
+        } else {
+            Ok(None)
         }
     }
 }

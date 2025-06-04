@@ -35,3 +35,22 @@ impl fmt::Display for Material {
         write!(f, "{} ({})", self.display_name(), self.unit())
     }
 }
+
+impl Material {
+    pub fn from_str(name: &str) -> Option<Material> {
+        match name {
+            "Grain" => Some(Material::Grain),
+            "Electricity" => Some(Material::Electricity),
+            "Water" => Some(Material::Water),
+            _ => None,
+        }
+    }
+
+    pub fn to_string_key(&self) -> &'static str {
+        match self {
+            Material::Grain => "Grain",
+            Material::Electricity => "Electricity",
+            Material::Water => "Water",
+        }
+    }
+}
