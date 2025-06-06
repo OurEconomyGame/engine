@@ -1,6 +1,6 @@
 [package]
 name = "our_economy_engine"                       
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"                     
 description = "Engine for the game Our Economy. Currently unusable, and progressing through rapid prototyping. Will often be half made, and be missing stuff." 
 authors = ["Moneyga.me Community", "Mastercoder1323/Masterplayer833"]           
