@@ -14,6 +14,7 @@ pub fn init_db() -> Result<Connection> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
+            energy INTEGER NOT NULL DEFAULT 50,
             usd INTEGER NOT NULL DEFAULT 0,
             data TEXT
         );",
