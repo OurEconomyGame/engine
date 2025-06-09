@@ -65,7 +65,7 @@ pub struct TierOneProdInstance {
     pub id: Option<u32>,
     pub name: String,
     pub owner: u32,
-    pub usd: u32,
+    pub usd: f32,
     pub base_type: String,
     pub creates: Material,
     pub human_prod_rate: u32,
@@ -93,7 +93,7 @@ impl TierOneProdInstance {
             id: None,
             name,
             owner: owner.id,
-            usd: 0,
+            usd: 0.0,
             base_type: base.type_name.clone(),
             creates: base.creates,
             human_prod_rate: base.human_prod_rate,
@@ -111,16 +111,16 @@ impl TierOneProdInstance {
         owner.edit_shares(instance.id, 10000);
         Ok(Some(instance))
     }
-    pub fn earn(&mut self, money: u32) {
+    pub fn earn(&mut self, money:f32) {
         self.usd += money;
     }
-    pub fn spend(&mut self, amount: u32) {
+    pub fn spend(&mut self, amount: f32) {
         if amount > self.usd {
             eprintln!(
                 "Warning: Tried to spend {} but only have {}",
                 amount, self.usd
             );
-            self.usd = 0;
+            self.usd = 0.0;
         } else {
             self.usd -= amount;
         }
@@ -225,7 +225,7 @@ impl TierOneProdInstance {
             })?;
 
             let owner = owner_str.parse::<u32>().unwrap_or(0);
-            let usd = data_json["usd"].as_u32().unwrap_or(0);
+            let usd = data_json["usd"].as_f32().unwrap_or(0.0);
             let human_prod_rate = data_json["human_prod_rate"].as_u32().unwrap_or(0);
             let robot_prod_rate = data_json["robot_prod_rate"].as_u32().unwrap_or(0);
             let max_human_workers = data_json["max_human_workers"].as_u32().unwrap_or(0);

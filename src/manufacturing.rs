@@ -37,7 +37,7 @@ pub struct TierTwoProdInstance {
     pub id: Option<u32>,
     pub name: String,
     pub owner: u32,
-    pub usd: u32,
+    pub usd: f32,
     pub base_type: String,
     pub creates: Material,
     pub human_prod_rate: u32,
@@ -61,7 +61,7 @@ impl TierTwoProdInstance {
             id: None,
             name,
             owner: owner.id,
-            usd: 0,
+            usd: 0.0,
             base_type: base.type_name.clone(),
             creates: base.creates,
             human_prod_rate: base.human_prod_rate,
@@ -184,16 +184,16 @@ impl TierTwoProdInstance {
         Ok(conn.last_insert_rowid() as u32)
     }
 
-    pub fn earn(&mut self, money: u32) {
+    pub fn earn(&mut self, money: f32) {
         self.usd += money;
     }
-    pub fn spend(&mut self, amount: u32) {
+    pub fn spend(&mut self, amount: f32) {
         if amount > self.usd {
             eprintln!(
                 "Warning: Tried to spend {} but only have {}",
                 amount, self.usd
             );
-            self.usd = 0;
+            self.usd = 0.0;
         } else {
             self.usd -= amount;
         }
@@ -217,10 +217,10 @@ impl TierTwoProdInstance {
                 )
             })?;
 
-            let owner = owner_str.parse::<u32>().unwrap_or(0);
-            let usd = data_json["usd"].as_u32().unwrap_or(0);
-            let human_prod_rate = data_json["human_prod_rate"].as_u32().unwrap_or(0);
-            let human_workers = data_json["human_workers"].clone();
+            let owner: u32 = owner_str.parse::<u32>().unwrap_or(0);
+            let usd: f32 = data_json["usd"].as_f32().unwrap_or(0.0);
+            let human_prod_rate: u32 = data_json["human_prod_rate"].as_u32().unwrap_or(0);
+            let human_workers: JsonValue = data_json["human_workers"].clone();
 
             let creates_str = data_json["creates"].as_str().unwrap_or("");
             let creates = Material::from_str(creates_str).unwrap();
