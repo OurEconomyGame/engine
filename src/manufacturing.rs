@@ -37,7 +37,7 @@ pub struct TierTwoProdInstance {
     pub id: Option<u32>,
     pub name: String,
     pub owner: u32,
-    pub usd: u32,
+    pub usd: f32,
     pub base_type: String,
     pub creates: Material,
     pub human_prod_rate: u32,
@@ -61,7 +61,7 @@ impl TierTwoProdInstance {
             id: None,
             name,
             owner: owner.id,
-            usd: 0,
+            usd: 0.0,
             base_type: base.type_name.clone(),
             creates: base.creates,
             human_prod_rate: base.human_prod_rate,
@@ -75,7 +75,6 @@ impl TierTwoProdInstance {
         owner.edit_shares(instance.id, 10000);
         Ok(Some(instance))
     }
-    
 
     pub fn hire_worker(&mut self, player: &Player) -> Result<(), String> {
         for entry in self.human_workers.members() {
@@ -115,7 +114,7 @@ impl TierTwoProdInstance {
                             Material::Electricity => self.owns.electricity,
                             Material::Water => self.owns.water,
                             Material::Food => {
-                                return Err("Tier 2 companies shouldn’t consume Food!".to_string())
+                                return Err("Tier 2 companies shouldn’t consume Food!".to_string());
                             }
                         };
                         if owned < *amount {
@@ -132,7 +131,7 @@ impl TierTwoProdInstance {
                             Material::Electricity => self.owns.electricity -= *amount,
                             Material::Water => self.owns.water -= *amount,
                             Material::Food => {
-                                return Err("Tier 2 companies shouldn’t consume Food!".to_string())
+                                return Err("Tier 2 companies shouldn’t consume Food!".to_string());
                             }
                         }
                     }
@@ -148,16 +147,17 @@ impl TierTwoProdInstance {
     }
 
     pub fn save(&mut self, conn: &Connection) -> Result<u32> {
-        let inputs_obj = object::Object::new();
-        let inputs_obj = self
-            .consumes
-            .inputs
-            .iter()
-            .fold(inputs_obj, |mut obj, (mat, amt)| {
-                obj.insert(mat.to_string_key(), JsonValue::from(*amt));
-                obj
-            });
+        // Build the JSON object for `consumes.inputs`
+        let inputs_obj =
+            self.consumes
+                .inputs
+                .iter()
+                .fold(object::Object::new(), |mut obj, (mat, amt)| {
+                    obj.insert(mat.to_string_key(), JsonValue::from(*amt));
+                    obj
+                });
 
+        // Full data payload
         let data = object! {
             usd: self.usd,
             human_prod_rate: self.human_prod_rate,
@@ -176,29 +176,46 @@ impl TierTwoProdInstance {
 
         let data_str = data.dump();
 
-        conn.execute(
-            "INSERT INTO company (name, owner, type, data) VALUES (?1, ?2, ?3, ?4)",
-            params![self.name, self.owner.to_string(), self.base_type, data_str],
-        )?;
-        self.id = Some(conn.last_insert_rowid() as u32);
-        Ok(conn.last_insert_rowid() as u32)
+        if let Some(id) = self.id {
+            // Update existing row
+            conn.execute(
+                "UPDATE company SET name = ?1, owner = ?2, type = ?3, data = ?4 WHERE id = ?5",
+                params![
+                    self.name,
+                    self.owner.to_string(),
+                    self.base_type,
+                    data_str,
+                    id
+                ],
+            )?;
+            Ok(id)
+        } else {
+            // Insert new row
+            conn.execute(
+                "INSERT INTO company (name, owner, type, data) VALUES (?1, ?2, ?3, ?4)",
+                params![self.name, self.owner.to_string(), self.base_type, data_str],
+            )?;
+            let new_id = conn.last_insert_rowid() as u32;
+            self.id = Some(new_id);
+            Ok(new_id)
+        }
     }
 
-    pub fn earn(&mut self, money: u32) {
+    pub fn earn(&mut self, money: f32) {
         self.usd += money;
     }
-    pub fn spend(&mut self, amount: u32) {
+    pub fn spend(&mut self, amount: f32) {
         if amount > self.usd {
             eprintln!(
                 "Warning: Tried to spend {} but only have {}",
                 amount, self.usd
             );
-            self.usd = 0;
+            self.usd = 0.0;
         } else {
             self.usd -= amount;
         }
     }
-    
+
     pub fn load(conn: &Connection, id: u32) -> Result<Option<Self>> {
         let mut stmt = conn.prepare("SELECT name, owner, type, data FROM company WHERE id = ?1")?;
         let mut rows = stmt.query(params![id])?;
@@ -217,10 +234,10 @@ impl TierTwoProdInstance {
                 )
             })?;
 
-            let owner = owner_str.parse::<u32>().unwrap_or(0);
-            let usd = data_json["usd"].as_u32().unwrap_or(0);
-            let human_prod_rate = data_json["human_prod_rate"].as_u32().unwrap_or(0);
-            let human_workers = data_json["human_workers"].clone();
+            let owner: u32 = owner_str.parse::<u32>().unwrap_or(0);
+            let usd: f32 = data_json["usd"].as_f32().unwrap_or(0.0);
+            let human_prod_rate: u32 = data_json["human_prod_rate"].as_u32().unwrap_or(0);
+            let human_workers: JsonValue = data_json["human_workers"].clone();
 
             let creates_str = data_json["creates"].as_str().unwrap_or("");
             let creates = Material::from_str(creates_str).unwrap();

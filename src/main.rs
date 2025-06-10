@@ -1,65 +1,28 @@
 #![allow(dead_code)]
 
-mod production_companies;
 mod company_data;
-mod materials;
-mod player;
 mod db;
-mod own_struct;
-mod recipies;
+mod extange;
 mod manufacturing;
+mod materials;
+mod own_struct;
+mod player;
+mod production_companies;
+mod recipies;
 use db::*;
-use production_companies::*;
-use company_data::*;
 use player::*;
+use production_companies::*;
 use rusqlite::Connection;
 
-use crate::manufacturing::TierTwoProdInstance;
+use crate::{extange::{Entity, EntityRef, Offer, OfferType}, manufacturing::TierTwoProdInstance, materials::Material};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let all_prods = tier_one_prod_list();
-    let all_manu = tier_two_prod_list();
     let conn: Connection = init_db()?;
-    let mut instances_id_one: Vec<u32> = Vec::new();
-    let mut instances_id_two: Vec<u32> = Vec::new();
+    let instances_id_one = [1,2,3];
+    let instances_id_two = [6];
     let mut player = Player::new("Admin".to_string());
     player.earn(300_000);
 
-    // Create Tier One instances
-    for prod in &all_prods {
-        match TierOneProdInstance::new(&conn, prod, "Something".to_string(), &mut player) {
-            Ok(Some(mut instance)) => {
-                if let Err(e) = instance.save(&conn).map(|id| instances_id_one.push(id)) {
-                    eprintln!("Failed to save TierOneProdInstance: {}", e);
-                }
-            }
-            Ok(None) => {
-                println!("Not enough funds to create {}", prod.type_name);
-            }
-            Err(e) => {
-                eprintln!("Error creating TierOneProdInstance: {}", e);
-            }
-        }
-        println!("{prod}");
-    }
-
-    // Create Tier Two instances
-    for prod in &all_manu {
-        match TierTwoProdInstance::new(&conn, prod, "Something".to_string(), &mut player) {
-            Ok(Some(mut instance)) => {
-                if let Err(e) = instance.save(&conn).map(|id| instances_id_two.push(id)) {
-                    eprintln!("Failed to save TierTwoProdInstance: {}", e);
-                }
-            }
-            Ok(None) => {
-                println!("Not enough funds to create {}", prod.type_name);
-            }
-            Err(e) => {
-                eprintln!("Error creating TierTwoProdInstance: {}", e);
-            }
-        }
-        println!("{prod}");
-    }
 
     // Operate on Tier One instances
     for prod_id in &instances_id_one {
@@ -77,13 +40,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         if let Err(e) = prod.hire_worker(&player) {
-            eprintln!("Error hiring worker on TierOneProdInstance {}: {}", prod_id, e);
+            eprintln!(
+                "Error hiring worker on TierOneProdInstance {}: {}",
+                prod_id, e
+            );
         }
+        prod.reset_workers();
         if let Err(e) = prod.human_worked(&mut player) {
-            eprintln!("Error during work on TierOneProdInstance {}: {}", prod_id, e);
+            eprintln!(
+                "Error during work on TierOneProdInstance {}: {}",
+                prod_id, e
+            );
         }
+        // Create a sell offer for 100 units at $0.10
+        let mut offer = Offer {
+            entity: EntityRef::Owned(Entity::Tier1(prod.clone())), // Clone the instance as Entity
+            conn: &conn,
+            item: prod.creates, // Replace with actual material you want to sell
+            quantity: 100,
+            price: 0.10,
+            offer_type: OfferType::Sell,
+        };
 
-        println!("{prod}");
+        if offer.valid() {
+            if let Err(e) = offer.execute() {
+                eprintln!(
+                    "Failed to save offer for TierOneProdInstance {}: {}",
+                    prod.id.unwrap(),
+                    e
+                );
+            } else {
+                println!(
+                    "Created sell offer for TierOneProdInstance {}!",
+                    prod.id.unwrap()
+                );
+            }
+        } else {
+            println!(
+                "Offer not valid for TierOneProdInstance {}!",
+                prod.id.unwrap()
+            );
+        }
+        let _ = prod.save(&conn);
     }
 
     // Operate on Tier Two instances
@@ -102,13 +100,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         if let Err(e) = prod.hire_worker(&player) {
-            eprintln!("Error hiring worker on TierTwoProdInstance {}: {}", prod_id, e);
+            eprintln!(
+                "Error hiring worker on TierTwoProdInstance {}: {}",
+                prod_id, e
+            );
         }
-        if let Err(e) = prod.human_worked(&mut player) {
-            eprintln!("Error during work on TierTwoProdInstance {}: {}", prod_id, e);
+        prod.reset_workers();
+        prod.earn(100_000.0);
+        // Create a bell offer for 100 units at $0.40
+        let mut entity_t: Entity = Entity::Tier2(prod);
+        let mut offer = Offer {
+            entity: EntityRef::Borrowed(&mut entity_t), // Clone the instance as Entity
+            conn: &conn,
+            item: Material::Electricity, // Replace with actual material you want to sell
+            quantity: 100,
+            price: 0.4,
+            offer_type: OfferType::Buy,
+        };
+
+        if offer.valid() {
+            if let Err(e) = offer.execute() {
+                eprintln!(
+                    "Failed to save offer for TierOneProdInstance {}: {}",
+                    entity_t.id(),
+                    e
+                );
+            } else {
+                println!(
+                    "Created buy offer for TierOneProdInstance {}!",
+                    entity_t.id()
+                );
+            }
+        } else {
+            println!(
+                "Offer not valid for TierOneProdInstance {}!",
+                entity_t.id()
+            );
         }
 
-        println!("{prod}");
+        if let Err(e) = prod.human_worked(&mut player) {
+            eprintln!(
+                "Error during work on TierTwoProdInstance {}: {}",
+                entity_t.id(), e
+            );
+        }
     }
 
     Ok(())
