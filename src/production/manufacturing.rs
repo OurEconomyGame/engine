@@ -1,6 +1,6 @@
 use crate::{
-    materials::Material, player::Player, production_companies::OwnsMaterials,
-    recipies::ConsumableRecipe,
+    materials::Material, player::Player, production::production_companies::OwnsMaterials,
+    production::recipies::ConsumableRecipe,
 };
 use json::{JsonValue, object};
 use rusqlite::{Connection, Result, params};

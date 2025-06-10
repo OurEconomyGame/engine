@@ -1,6 +1,6 @@
 use crate::{
-    manufacturing::TierTwoProdInstance, materials::Material,
-    production_companies::TierOneProdInstance,
+    production::manufacturing::TierTwoProdInstance, materials::Material,
+    production::production_companies::TierOneProdInstance,
 };
 use rusqlite::{Connection, params};
 
@@ -152,7 +152,6 @@ impl<'a, 'b> Offer<'a, 'b> {
             ],
         )?;
 
-        println!("Offer saved to DB.");
         Ok(())
     }
 
@@ -219,17 +218,6 @@ impl<'a, 'b> Offer<'a, 'b> {
 
 impl<'a, 'b> Offer<'a, 'b> {
     pub fn execute(&mut self) -> rusqlite::Result<()> {
-        println!("🔧 Starting offer execution.");
-        println!(
-            "👉 Offer details: item = {:?}, type = {:?}, qty = {}, price = {}",
-            self.item, self.offer_type, self.quantity, self.price
-        );
-        println!(
-            "👉 Entity ID: {}, type_code: {}, USD: {}",
-            self.entity.id(),
-            self.entity.type_code(),
-            self.entity.usd()
-        );
 
         if !self.valid() {
             println!("❌ Offer is not valid.");
@@ -240,11 +228,6 @@ impl<'a, 'b> Offer<'a, 'b> {
             OfferType::Buy => (OfferType::Sell, "<="),
             OfferType::Sell => (OfferType::Buy, ">="),
         };
-
-        println!(
-            "🔎 Looking for matching {:?} offers with price {} {}",
-            target_offer_type, price_operator, self.price
-        );
 
         let sql = format!(
             "SELECT id, amount, unit_price, entity, entity_type
@@ -261,22 +244,14 @@ impl<'a, 'b> Offer<'a, 'b> {
             }
         );
 
-        println!("📄 Final SQL query: {}", sql);
 
         let mut stmt = self.conn.prepare(&sql)?;
-        println!("✅ SQL prepared successfully.");
 
         let mut rows = stmt.query(params![
             self.item.to_string_key(),
             bool::from(target_offer_type),
             self.price,
         ])?;
-        println!(
-            "🔍 Query executed with item='{}', type={}, price={}",
-            self.item.to_string(),
-            bool::from(target_offer_type),
-            self.price
-        );
 
         let mut remaining_qty = self.quantity;
         let mut match_found = false;
@@ -291,15 +266,7 @@ impl<'a, 'b> Offer<'a, 'b> {
             }
 
             let matched_id: i64 = row.get(0)?;
-            let matched_qty: u32 = row.get(1)?;
             let matched_price: f32 = row.get(2)?;
-            let matched_entity_id: u32 = row.get(3)?;
-            let matched_entity_type: i32 = row.get(4)?;
-
-            println!(
-                "➡️ Matched offer: ID = {}, Qty = {}, Price = {}, Entity ID = {}, Type = {}",
-                matched_id, matched_qty, matched_price, matched_entity_id, matched_entity_type
-            );
 
             let mut matched_offer =
                 Offer::load_from_id(self.conn, matched_id)?.expect("Failed to load matched offer");
@@ -309,36 +276,30 @@ impl<'a, 'b> Offer<'a, 'b> {
 
             match self.offer_type {
                 OfferType::Buy => {
-                    println!("💰 Buyer (self) gains materials, seller (matched) gains USD.");
                     self.entity.as_mut().add_material(self.item, trade_qty);
                     matched_offer
                         .entity
                         .as_mut()
                         .earn(trade_qty as f32 * matched_price);
+                    let _ = matched_offer.entity.as_mut().save(self.conn);
                 }
                 OfferType::Sell => {
-                    println!("📦 Seller (self) gains USD, buyer (matched) gains materials.");
                     matched_offer
                         .entity
                         .as_mut()
                         .add_material(self.item, trade_qty);
+                    let _ = matched_offer.entity.as_mut().save(self.conn);
                     self.entity.as_mut().earn(trade_qty as f32 * matched_price);
                 }
             }
 
             remaining_qty -= trade_qty;
             matched_offer.quantity -= trade_qty;
-            println!(
-                "📉 Remaining qty: {}, Matched offer new qty: {}",
-                remaining_qty, matched_offer.quantity
-            );
 
             if matched_offer.quantity == 0 {
-                println!("🗑️ Matched offer fully filled. Deleting from DB.");
                 self.conn
                     .execute("DELETE FROM extchange WHERE id = ?1", params![matched_id])?;
             } else {
-                println!("✏️ Updating matched offer with new quantity.");
                 self.conn.execute(
                     "UPDATE extchange SET amount = ?1 WHERE id = ?2",
                     params![matched_offer.quantity, matched_id],

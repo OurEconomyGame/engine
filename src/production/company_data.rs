@@ -1,7 +1,7 @@
-use crate::production_companies::*;
+use crate::production::production_companies::*;
 use crate::materials::Material::*;
-use crate::manufacturing::*;
-use crate::recipies::ConsumableRecipe;
+use crate::production::manufacturing::*;
+use crate::production::recipies::ConsumableRecipe;
 
 pub fn tier_one_prod_list() -> [TierOneProdBase; 3] {
     [

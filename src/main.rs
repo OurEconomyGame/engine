@@ -1,20 +1,14 @@
 #![allow(dead_code)]
 
-mod company_data;
+mod production;
 mod db;
 mod extange;
-mod manufacturing;
 mod materials;
 mod own_struct;
 mod player;
-mod production_companies;
-mod recipies;
-use db::*;
-use player::*;
-use production_companies::*;
 use rusqlite::Connection;
 
-use crate::{extange::{Entity, EntityRef, Offer, OfferType}, manufacturing::TierTwoProdInstance, materials::Material};
+use crate::{db::init_db, extange::{Entity, EntityRef, Offer, OfferType}, player::Player, production::{manufacturing::TierTwoProdInstance, production_companies::TierOneProdInstance}};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conn: Connection = init_db()?;
@@ -57,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             entity: EntityRef::Owned(Entity::Tier1(prod.clone())), // Clone the instance as Entity
             conn: &conn,
             item: prod.creates, // Replace with actual material you want to sell
-            quantity: 100,
+            quantity: prod.human_prod_rate,
             price: 0.10,
             offer_type: OfferType::Sell,
         };
@@ -106,44 +100,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
         prod.reset_workers();
-        prod.earn(100_000.0);
-        // Create a bell offer for 100 units at $0.40
-        let mut entity_t: Entity = Entity::Tier2(prod);
-        let mut offer = Offer {
-            entity: EntityRef::Borrowed(&mut entity_t), // Clone the instance as Entity
-            conn: &conn,
-            item: Material::Electricity, // Replace with actual material you want to sell
-            quantity: 100,
-            price: 0.4,
-            offer_type: OfferType::Buy,
-        };
-
-        if offer.valid() {
-            if let Err(e) = offer.execute() {
-                eprintln!(
-                    "Failed to save offer for TierOneProdInstance {}: {}",
-                    entity_t.id(),
-                    e
-                );
-            } else {
-                println!(
-                    "Created buy offer for TierOneProdInstance {}!",
-                    entity_t.id()
-                );
-            }
-        } else {
-            println!(
-                "Offer not valid for TierOneProdInstance {}!",
-                entity_t.id()
-            );
-        }
-
+        
         if let Err(e) = prod.human_worked(&mut player) {
             eprintln!(
                 "Error during work on TierTwoProdInstance {}: {}",
-                entity_t.id(), e
+                prod.id.ok_or("Id not found")?, e
             );
         }
+        let _ = prod.save(&conn);
     }
 
     Ok(())

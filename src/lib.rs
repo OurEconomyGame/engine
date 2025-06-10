@@ -1,13 +1,11 @@
 #![allow(dead_code)]
 
-mod production_companies;
-mod company_data;
+
 mod materials;
 mod player;
 mod db;
 mod own_struct;
-mod recipies;
-mod manufacturing;
+mod production;
 mod extange;
 /* 
 
