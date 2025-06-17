@@ -7,6 +7,11 @@ mod db;
 mod own_struct;
 mod production;
 mod extange;
+
+pub fn init_variables(){
+    
+}
+
 /* 
 
 #[cfg(test)]
