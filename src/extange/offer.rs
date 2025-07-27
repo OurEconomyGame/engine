@@ -1,5 +1,7 @@
-use super::offer_helpers::*;
-use crate::materials::Material;
+use crate::{
+    extange::{EntityRef, OfferType},
+    materials::Material,
+};
 use rusqlite::Connection;
 pub struct Offer<'a, 'b> {
     pub entity: EntityRef<'a>,
@@ -13,7 +15,7 @@ pub struct Offer<'a, 'b> {
 impl<'a, 'b> Offer<'a, 'b> {
     pub fn valid(&self) -> bool {
         match self.offer_type {
-            OfferType::Buy => self.entity.usd() >= self.quantity as f32 * self.price,
+            OfferType::Buy => self.entity.as_ref().usd >= self.quantity as f32 * self.price,
             OfferType::Sell => true, // Inventory check logic can be added later
         }
     }

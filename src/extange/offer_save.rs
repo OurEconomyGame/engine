@@ -1,23 +1,26 @@
-use super::offer::*;
-use super::offer_helpers::*;
 use crate::{
-    materials::Material, production::manufacturing::TierTwoProdInstance,
-    production::production_companies::TierOneProdInstance,
+    extange::{EntityRef, OfferType},
+    materials::Material,
+    production::ProdInstance,
 };
+
+use super::Offer;
 use rusqlite::{Connection, params};
 
 impl<'a, 'b> Offer<'a, 'b> {
     pub(super) fn save_to_db(&self) -> rusqlite::Result<()> {
         self.conn.execute(
-            "INSERT INTO extchange (item, type, amount, unit_price, unit_type, entity, entity_type)
-             VALUES (?1, ?2, ?3, ?4, 'unit', ?5, ?6)",
+            "INSERT INTO extchange (item, type, amount, unit_price, entity)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
             params![
                 self.item.to_string_key(),
                 bool::from(self.offer_type),
                 self.quantity,
                 self.price,
-                self.entity.id(),
-                self.entity.type_code(),
+                self.entity
+                    .as_ref()
+                    .id
+                    .expect("Entity Id in saving extange offer is None!")
             ],
         )?;
 
@@ -29,7 +32,7 @@ impl<'a, 'b> Offer<'a, 'b> {
         offer_id: i64,
     ) -> rusqlite::Result<Option<Offer<'static, 'b>>> {
         let mut stmt = conn.prepare(
-            "SELECT item, type, amount, unit_price, entity, entity_type
+            "SELECT item, type, amount, unit_price, entity
              FROM extchange
              WHERE id = ?1",
         )?;
@@ -40,23 +43,10 @@ impl<'a, 'b> Offer<'a, 'b> {
             let quantity: u32 = row.get(2)?;
             let price: f32 = row.get(3)?;
             let entity_id: u32 = row.get(4)?;
-            let entity_type: i32 = row.get(5)?;
 
             let item = Material::from_str(&item_str).expect("Invalid material name in DB");
 
-            let entity = match entity_type {
-                1 => {
-                    let t1 = TierOneProdInstance::load(conn, entity_id)?
-                        .expect("TierOneProdInstance not found");
-                    Entity::Tier1(t1)
-                }
-                2 => {
-                    let t2 = TierTwoProdInstance::load(conn, entity_id)?
-                        .expect("TierTwoProdInstance not found");
-                    Entity::Tier2(t2)
-                }
-                _ => panic!("Unknown entity_type in DB"),
-            };
+            let entity = ProdInstance::load(conn, entity_id)?.expect("Entity doesnt exist!!!");
 
             Ok((
                 item,

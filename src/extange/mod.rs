@@ -1,17 +1,13 @@
-pub mod offer;
-pub mod offer_exec;
-pub mod offer_helpers;
-pub mod offer_save;
-pub mod run_offer;
+use crate::flatten_modules;
 
-// Re-export all public items from the submodules
-#[allow(unused_imports)]
-pub use offer::*;
-#[allow(unused_imports)]
-pub use offer_exec::*;
-#[allow(unused_imports)]
-pub use offer_helpers::*;
-#[allow(unused_imports)]
-pub use offer_save::*;
-#[allow(unused_imports)]
-pub use run_offer::*;
+flatten_modules!(
+    offer,
+    offer_type,
+    offer_save,
+    entity_ref,
+    offer_exec,
+    run_offer,
+    buy_needed,
+    offer_exec_helpers,
+    sell_all
+);

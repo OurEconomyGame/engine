@@ -1,5 +1,4 @@
-use super::offer::*;
-use super::offer_helpers::*;
+use super::*;
 use rusqlite::params;
 
 impl<'a, 'b> Offer<'a, 'b> {
@@ -14,20 +13,7 @@ impl<'a, 'b> Offer<'a, 'b> {
             OfferType::Sell => (OfferType::Buy, ">="),
         };
 
-        let sql = format!(
-            "SELECT id, amount, unit_price, entity, entity_type
-         FROM extchange
-         WHERE item = ?1
-         AND type = ?2
-         AND unit_price {} ?3
-         ORDER BY unit_price {}",
-            price_operator,
-            if self.offer_type == OfferType::Buy {
-                "ASC"
-            } else {
-                "DESC"
-            }
-        );
+        let sql = build_sql_query(self.offer_type, price_operator);
 
         let mut stmt = self.conn.prepare(&sql)?;
 
@@ -58,37 +44,12 @@ impl<'a, 'b> Offer<'a, 'b> {
             let trade_qty = remaining_qty.min(matched_offer.quantity);
             println!("🔁 Trading {} units @ {}", trade_qty, matched_price);
 
-            match self.offer_type {
-                OfferType::Buy => {
-                    self.entity.as_mut().add_material(self.item, trade_qty);
-                    matched_offer
-                        .entity
-                        .as_mut()
-                        .earn(trade_qty as f32 * matched_price);
-                    let _ = matched_offer.entity.as_mut().save(self.conn);
-                }
-                OfferType::Sell => {
-                    matched_offer
-                        .entity
-                        .as_mut()
-                        .add_material(self.item, trade_qty);
-                    let _ = matched_offer.entity.as_mut().save(self.conn);
-                    self.entity.as_mut().earn(trade_qty as f32 * matched_price);
-                }
-            }
+            process_trade(self, &mut matched_offer, trade_qty, matched_price)?;
 
             remaining_qty -= trade_qty;
             matched_offer.quantity -= trade_qty;
 
-            if matched_offer.quantity == 0 {
-                self.conn
-                    .execute("DELETE FROM extchange WHERE id = ?1", params![matched_id])?;
-            } else {
-                self.conn.execute(
-                    "UPDATE extchange SET amount = ?1 WHERE id = ?2",
-                    params![matched_offer.quantity, matched_id],
-                )?;
-            }
+            update_db_after_trade(self.conn, matched_id, &mut matched_offer)?;
 
             self.quantity = remaining_qty;
         }

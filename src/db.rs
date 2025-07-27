@@ -7,7 +7,6 @@ pub fn init_db() -> Result<Connection> {
     conn.execute("PRAGMA foreign_keys = ON;", [])?;
     let _ = conn.query_row("PRAGMA journal_mode = WAL;", [], |_row| Ok(()));
 
-
     // Create `user` table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS user (
@@ -41,9 +40,7 @@ pub fn init_db() -> Result<Connection> {
             type BOOLEAN NOT NULL,
             amount INTEGER NOT NULL,
             unit_price FLOAT NOT NULL,
-            unit_type TEXT NOT NULL,
             entity INTEGER NOT NULL,
-            entity_type INTEGER NOT NULL
         );",
         [],
     )?;

@@ -1,28 +1,6 @@
-#![allow(dead_code)]
-
-
+mod db;
+mod extange;
+mod macros;
 mod materials;
 mod player;
-mod db;
-mod own_struct;
 mod production;
-mod extange;
-
-pub fn init_variables(){
-    
-}
-
-/* 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn load_grain(){
-        let my_json: json::JsonValue = load_json::load_json_file("data/prod/base/grain.json");
-        let base_grain = companies::TierOneProd::new_base(my_json);
-    }
-}
-
-*/
