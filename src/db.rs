@@ -40,7 +40,7 @@ pub fn init_db() -> Result<Connection> {
             type BOOLEAN NOT NULL,
             amount INTEGER NOT NULL,
             unit_price FLOAT NOT NULL,
-            entity INTEGER NOT NULL,
+            entity INTEGER NOT NULL
         );",
         [],
     )?;

@@ -10,7 +10,6 @@ impl ProdInstance {
                 "Warning: Tried to spend {} but only have {}",
                 amount, self.usd
             );
-            self.usd = 0.0;
         } else {
             self.usd -= amount;
         }
@@ -18,5 +17,17 @@ impl ProdInstance {
 
     pub fn add_material(&mut self, item: Material, amount: u32) {
         self.owns.add(item, amount);
+    }
+
+    pub fn remove_material(&mut self, item: Material, amount: u32) {
+        if amount > self.owns.amount_of(item) {
+            eprintln!(
+                "Warning: Tried to remove {} but only have {}",
+                amount,
+                self.owns.amount_of(item)
+            );
+        } else {
+            self.owns.remove(item, amount);
+        }
     }
 }

@@ -3,6 +3,7 @@ use crate::{materials::*, production::ProdInstance};
 use rusqlite::Connection;
 impl ProdInstance {
     pub fn quick_sell(&mut self, conn: &Connection, item: Material, price: f32, amount: u32) {
+        self.remove_material(item, amount);
         let prod_id = self
             .id
             .expect("Id is None! Can't sell from a non-existent entity!");
@@ -33,6 +34,7 @@ impl ProdInstance {
     }
 
     pub fn quick_buy(&mut self, conn: &Connection, item: Material, price: f32, amount: u32) {
+        self.spend(price * amount as f32);
         let prod_id = self.id.expect("A non existant entity cant buy wares!");
         let mut offer = Offer {
             entity: EntityRef::Borrowed(self), // Use the original 'prod' here

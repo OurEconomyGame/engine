@@ -56,6 +56,18 @@ macro_rules! define_materials {
                     $(Material::$mat => self.$field += amount),*
                 }
             }
+
+            pub fn remove(&mut self, mat: Material, amount: u32) {
+                match mat {
+                    $(Material::$mat => self.$field -= amount),*
+                }
+            }
+
+            pub fn amount_of(&self, mat: Material) -> u32 {
+                match mat {
+                    $(Material::$mat => self.$field),*
+                }
+            }
         }
     };
 }

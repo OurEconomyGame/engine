@@ -4,7 +4,7 @@ use rusqlite::params;
 // Helper to build SQL query string
 pub fn build_sql_query(offer_type: OfferType, price_operator: &str) -> String {
     format!(
-        "SELECT id, amount, unit_price, entity, entity_type
+        "SELECT id, amount, unit_price, entity
          FROM extchange
          WHERE item = ?1
          AND type = ?2

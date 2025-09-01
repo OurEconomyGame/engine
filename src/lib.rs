@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 mod db;
 mod extange;
 mod macros;
